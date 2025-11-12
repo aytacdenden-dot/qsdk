@@ -1,0 +1,41 @@
+.github/workflows/build.yml
+name: OpenWrt (QSDK) Firmware Derleme
+
+on:
+  push:
+    branches:
+      - 12.5.2783.2994  # Sizin dal adiniz
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kodu Cekme (Checkout)
+        uses: actions/checkout@v4
+
+      - name: Gerekli Paketleri ve Feeds'leri Kurma
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential subversion git libncurses5-dev zlib1g-dev gawk pkg-config unzip file python3
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: .config Dosyasini Kontrol Etme ve Hazirlama
+        run: |
+          # Yerel .config dosyasini kullanir
+          make defconfig
+
+      - name: Firmware Derleme
+        run: make -j$(nproc) V=s
+
+      - name: Derlenen Dosyalari Paketleme
+        run: zip -r "QSDK_Firmware_AX1800_$(date +%Y-%m-%d).zip" bin/targets/qualcommax/ipq60xx/
+
+      - name: Firmware Dosyalarini Yukleme (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: QSDK-AX1800-Firmware
+          path: "*.zip"
+          retention-days: 1
